@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import requests
 from bs4 import BeautifulSoup
 
@@ -35,19 +36,22 @@ def fetch_trending(language):
 
 
 def translate(text):
-    """구글 번역. 실패하면 원문 그대로."""
+    """구글 번역. 3번 재시도하고 그래도 실패하면 원문 그대로."""
     if not text:
         return text
-    try:
-        res = requests.get(
-            "https://translate.googleapis.com/translate_a/single",
-            params={"client": "gtx", "sl": "en", "tl": "ko", "dt": "t", "q": text},
-            timeout=10,
-        )
-        res.raise_for_status()
-        return "".join(part[0] for part in res.json()[0])
-    except Exception:
-        return text
+    for attempt in range(3):
+        try:
+            res = requests.get(
+                "https://translate.googleapis.com/translate_a/single",
+                params={"client": "gtx", "sl": "en", "tl": "ko", "dt": "t", "q": text},
+                timeout=10,
+            )
+            res.raise_for_status()
+            return "".join(part[0] for part in res.json()[0])
+        except Exception as e:
+            print(f"번역 실패({attempt + 1}/3): {e}", file=sys.stderr)
+            time.sleep(1 + attempt)
+    return text
 
 
 def build_embed(language, repos):
