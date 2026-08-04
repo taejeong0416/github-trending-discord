@@ -4,7 +4,7 @@ import requests
 from bs4 import BeautifulSoup
 
 # 브리핑할 언어. ""은 전체 트렌딩.
-LANGUAGES = ["", "python", "typescript"]
+LANGUAGES = [""]
 TOP_N = 5
 SINCE = "daily"  # daily | weekly | monthly
 
@@ -34,10 +34,27 @@ def fetch_trending(language):
     return repos
 
 
+def translate(text):
+    """구글 번역. 실패하면 원문 그대로."""
+    if not text:
+        return text
+    try:
+        res = requests.get(
+            "https://translate.googleapis.com/translate_a/single",
+            params={"client": "gtx", "sl": "en", "tl": "ko", "dt": "t", "q": text},
+            timeout=10,
+        )
+        res.raise_for_status()
+        return "".join(part[0] for part in res.json()[0])
+    except Exception:
+        return text
+
+
 def build_embed(language, repos):
     lines = []
     for i, r in enumerate(repos, 1):
-        desc = r["desc"][:120] + ("..." if len(r["desc"]) > 120 else "")
+        desc = translate(r["desc"])
+        desc = desc[:120] + ("..." if len(desc) > 120 else "")
         meta = " · ".join(x for x in [r["lang"], r["today"]] if x)
         lines.append(f"**{i}. [{r['name']}]({r['url']})**\n{desc}\n`{meta}`")
 
