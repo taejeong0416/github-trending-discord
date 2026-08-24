@@ -36,18 +36,22 @@ def fetch_trending(language):
 
 
 def translate(text):
-    """구글 번역. 3번 재시도하고 그래도 실패하면 원문 그대로."""
+    """MyMemory 번역. 3번 재시도하고 그래도 실패하면 원문 그대로."""
     if not text:
         return text
     for attempt in range(3):
         try:
             res = requests.get(
-                "https://translate.googleapis.com/translate_a/single",
-                params={"client": "gtx", "sl": "en", "tl": "ko", "dt": "t", "q": text},
+                "https://api.mymemory.translated.net/get",
+                # q는 요청당 500바이트 제한, 익명 사용은 하루 5000자
+                params={"q": text[:500], "langpair": "en|ko"},
                 timeout=10,
             )
             res.raise_for_status()
-            return "".join(part[0] for part in res.json()[0])
+            data = res.json()
+            if data.get("responseStatus") != 200:
+                raise RuntimeError(data.get("responseDetails") or data.get("responseStatus"))
+            return data["responseData"]["translatedText"]
         except Exception as e:
             print(f"번역 실패({attempt + 1}/3): {e}", file=sys.stderr)
             time.sleep(1 + attempt)
